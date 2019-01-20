@@ -12,15 +12,16 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 library(knitr)
 library(ggplot2)
+library(dplyr)
 ```
 
 # Class Intro
 
 ## Intro Questions 
->- What is point referenced data?
->- How do we predict the response at unobserved locations?
->- What is a variogram?
-- For Today
+- What is point referenced data?
+- How do we predict the response at unobserved locations?
+- What is a variogram?
+- For Today:
     - How is a variogram useful?
     - How is EDA used for point referenced data?
 
@@ -104,8 +105,58 @@ ggplot(data = exp.var, aes(x=d, y=exp.gam)) + geom_line() + ylim(0,4) + ylab('ex
   colour = "blue", linetype =3, size = .5) 
 ```
 
-## More Semivariograms: Graphs
-
 ## More Semivariograms: Equations
+- Gaussian: 
+$$\gamma(d)=
+\begin{cases}
+\tau^2 + \sigma^2(1 - \exp(-\phi^2 d^2)) \; \; \text{if } d > 0\\
+0 \; \; \text{otherwise} 
+\end{cases}$$
+- Powered Exponential:
+$$\gamma(d)=
+\begin{cases}
+\tau^2 + \sigma^2(1 - \exp(-|\phi d|^p)) \; \; \text{if } d > 0\\
+0 \; \; \text{otherwise} 
+\end{cases}$$
+- Mat$\acute{\text{e}}$rn:
+$$\gamma(d)=
+\begin{cases}
+\tau^2 + \sigma^2\left[1 - \frac{(2\sqrt{\nu}d \phi)^\nu}{2^{\nu-1}\Gamma(\nu)} K_\nu (2 \sqrt{\nu} d \phi)\right] \; \; \text{if } d > 0\\
+0 \; \; \text{otherwise} 
+\end{cases},$$
+where $K_\nu$ is a modified Bessel function and $\Gamma()$ is a Gamma function.
 
-## Variogram Fitting: How?
+
+## Variogram Creation: How?
+
+```{r, echo= t}
+library(sp)
+data(meuse)
+meuse.small <- meuse %>% select(x, y, copper) %>% tbl_df()
+meuse.small %>% kable()
+```
+
+## Variogram Creation: Steps
+
+1. Calculate distances between sampling locations
+2. Choose grid for distance calculations
+3. Calculate empirical semivariogram
+$$\hat{\gamma}(d_k) = \frac{1}{2N(d_k)} \sum_{\boldsymbol{s}_i,\boldsymbol{s}_i, \in N(d_k)}\left[ \boldsymbol{Y}(\boldsymbol{s}_i) - \boldsymbol{Y}(\boldsymbol{s}_j)  \right]^2,$$
+where $$N(d_k) = \{(\boldsymbol{s}_i,\boldsymbol{s}_j): ||\boldsymbol{s}_i -\boldsymbol{s}_j|| \in I_k\}$$ and $I_k$ is the $k^{th}$ interval.
+
+or
+```{r, eval = F}
+library(gstat)
+coordinates(meuse.small)~x+y
+variogram(copper~1, meuse.small)
+```
+
+## Variogram Creation: How - Step 1
+
+- Calculate Distances between sampling locations
+
+```{r, echo= t}
+dist(meuse.small)
+dist.mat <- dist(meuse.small %>% select(x,y))
+```
+
