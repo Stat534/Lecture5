@@ -1,0 +1,111 @@
+---
+title: "Lecture 5: Point Level Models - Variograms and EDA"
+output:
+  revealjs::revealjs_presentation:
+    theme: night
+    center: true
+    transition: none
+    incremental: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(knitr)
+library(ggplot2)
+```
+
+# Class Intro
+
+## Intro Questions 
+>- What is point referenced data?
+>- How do we predict the response at unobserved locations?
+>- What is a variogram?
+- For Today
+    - How is a variogram useful?
+    - How is EDA used for point referenced data?
+
+
+## Spherical semivariogram: Exercise
+$$\gamma(d)=
+\begin{cases}
+\tau^2 + \sigma^2 \; \; \text{if } d \geq 1/ \phi\\
+\tau^2 + \sigma^2\left[\frac{3\phi d}{2} - \frac{1}{2} (\phi d)^3 \right]\\
+0 \; \; \text{otherwise}
+\end{cases}$$
+
+- Sketch, or generate in R, a spherical semivariogram
+- On this figure label the nugget, sill, partial sill, and range.
+
+## Spherical semivariogram: Solution
+
+```{r}
+tau.sq <- 1
+sigma.sq <- 2
+range <- 2
+phi <- 1/range
+d <- seq(0,3, by =.01)
+sph.gam <- tau.sq + sigma.sq * (3 * phi * d / 2 - .5 * (phi*d)^3)
+sph.gam[d >= range] <- tau.sq + sigma.sq
+sph.var <- data.frame(d=d, sph.gam = sph.gam )
+ggplot(data = sph.var, aes(x=d, y=sph.gam)) + geom_line() + ylim(0,4) + ylab('spherical variogram') + annotate('text', x=0.1, y = 0.9, label = 'nugget') + annotate('text', x=2.5, y = 3.1, label = 'sill') + annotate('text', x=2.2, y = .1, label = 'range', color = 'blue') +  annotate("segment", x = 2, xend = 2, y = 0, yend = 4,
+  colour = "blue", linetype =3, size = .5) +  annotate("segment", x = 2, xend = 3, y = 1, yend = 1,colour = "red", linetype =3, size = .5) +  annotate("segment", x = 2, xend = 3, y = 3, yend = 3,colour = "red", linetype =3, size = .5) +  annotate("segment", x = 2.5, xend = 2.5, y = 1, yend = 3,colour = "red", linetype =3, size = .5) + annotate('text', x=2.2, y = 2, label = 'partial sill', color = 'red') 
+```
+
+# More Variograms
+
+## Exponential 
+
+>- We saw the exponential covariance earlier in class, what is the mathematical form?
+- $$C(d)=
+\begin{cases}
+\tau^2 + \sigma^2 \; \; \text{if } d = 0\\
+\sigma^2 \exp(-\phi d) \; \; \text{if } d > 0
+\end{cases}$$
+- The variogram is 
+$$\gamma(d)=
+\begin{cases}
+\tau^2 + \sigma^2(1 - \exp(-\phi d)) \; \; \text{if } d > 0\\
+0 \; \; \text{otherwise} 
+\end{cases}$$
+
+## Exponential Semivariogram: Exercise
+
+- Plot the exponential semivariogram
+
+- Identify and interpret: the nugget, range, and sill. How are they similar or different from the spherical semivariogram?
+
+## Exponential Semivariogram: Solution
+
+```{r}
+exp.gam <- tau.sq + sigma.sq * (1 - exp( - phi * d))
+exp.var <- data.frame(d=d, exp.gam = exp.gam )
+ggplot(data = exp.var, aes(x=d, y=exp.gam)) + geom_line() + ylim(0,4) + ylab('exponential variogram') + annotate('text', x=0.1, y = 0.9, label = 'nugget') + annotate('text', x=2.9, y = 2.65, label = 'sill?') + annotate('text', x=2.2, y = .1, label = 'range?', color = 'blue') +  annotate("segment", x = 2, xend = 2, y = 0, yend = 4,
+  colour = "blue", linetype =3, size = .5) 
+```
+
+## Exponential Semivariogram: Solution 2
+
+- The sill is only reached asymptotically when $$\lim_{d\rightarrow \infty} exp(-\phi * d) \rightarrow 0$$
+- Thus, the range, defined as distance where semivariogram reaches the sill is $\infty$
+- The *effective range* is defined as the distance where there is *effectively* no spatial structure. Generally this is determined when the correlation is .05. 
+- \begin{eqnarray*}
+\exp(-d_o \phi) &=&.05 \\
+d_0 \phi &=& - \log(.05) \\
+d_0 &\approx& \frac{3}{\phi}
+\end{eqnarray*}
+
+## Exponential Semivariogram: Solution 3
+
+```{r}
+d <- seq(0,8, by = .01)
+exp.gam <- tau.sq + sigma.sq * (1 - exp( - phi * d))
+exp.var <- data.frame(d=d, exp.gam = exp.gam )
+ggplot(data = exp.var, aes(x=d, y=exp.gam)) + geom_line() + ylim(0,4) + ylab('exponential variogram') + annotate('text', x=0.1, y = 0.9, label = 'nugget') + annotate('text', x=7.9, y = 3.1, label = 'sill') + annotate('text', x=6.6, y = .1, label = 'effective range', color = 'blue') +  annotate("segment", x = 6, xend = 6, y = 0, yend = 4,
+  colour = "blue", linetype =3, size = .5) 
+```
+
+## More Semivariograms: Graphs
+
+## More Semivariograms: Equations
+
+## Variogram Fitting: How?
