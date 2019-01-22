@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = FALSE)
 library(knitr)
 library(ggplot2)
 library(dplyr)
+library(gstat)
+library(sp)
 ```
 
 # Class Intro
@@ -127,13 +129,15 @@ $$\gamma(d)=
 where $K_\nu$ is a modified Bessel function and $\Gamma()$ is a Gamma function.
 
 
+# Variogram Creation
+
+
 ## Variogram Creation: How?
 
-```{r, echo= t}
-library(sp)
+```{r, echo=F}
 data(meuse)
 meuse.small <- meuse %>% select(x, y, copper) %>% tbl_df()
-meuse.small %>% kable()
+meuse.small %>% head(15) %>% kable()
 ```
 
 ## Variogram Creation: Steps
@@ -143,20 +147,37 @@ meuse.small %>% kable()
 3. Calculate empirical semivariogram
 $$\hat{\gamma}(d_k) = \frac{1}{2N(d_k)} \sum_{\boldsymbol{s}_i,\boldsymbol{s}_i, \in N(d_k)}\left[ \boldsymbol{Y}(\boldsymbol{s}_i) - \boldsymbol{Y}(\boldsymbol{s}_j)  \right]^2,$$
 where $$N(d_k) = \{(\boldsymbol{s}_i,\boldsymbol{s}_j): ||\boldsymbol{s}_i -\boldsymbol{s}_j|| \in I_k\}$$ and $I_k$ is the $k^{th}$ interval.
+4. Plot the semivariogram
 
-or
-```{r, eval = F}
-library(gstat)
-coordinates(meuse.small)~x+y
-variogram(copper~1, meuse.small)
+
+## Variogram Creation: R function
+
+```{r, eval = T}
+data(meuse)
+coordinates(meuse) = ~x+y
+variogram(copper~1, meuse) %>% plot()
 ```
 
 ## Variogram Creation: How - Step 1
 
-- Calculate Distances between sampling locations
+Calculate Distances between sampling locations
 
 ```{r, echo= t}
 dist(meuse.small)
 dist.mat <- dist(meuse.small %>% select(x,y))
 ```
+
+## Variogram Creation: How - Step 2
+
+Choose grid for distance calculations
+
+```{r, echo= t}
+cutoff <- max(dist.mat) / 3 # default maximum distance
+num.bins <-  15
+bin.width <- cutoff / 15
+```
+
+## Variogram Creation: How - Step 3
+
+Calculate empirical semivariogram
 
