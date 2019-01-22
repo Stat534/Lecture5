@@ -1,5 +1,5 @@
 ---
-title: "Lecture 5: Point Level Models - Variograms and EDA"
+title: "Lecture 5: Point Level Models - Variograms"
 output:
   revealjs::revealjs_presentation:
     theme: night
@@ -22,10 +22,114 @@ library(sp)
 ## Intro Questions 
 - What is point referenced data?
 - How do we predict the response at unobserved locations?
-- What is a variogram?
 - For Today:
+    - What is a variogram?
     - How is a variogram useful?
     - How is EDA used for point referenced data?
+
+# Elements of Geostatistical models: continued...
+
+## Stationarity
+
+>- Assume the spatial process, $\boldsymbol{Y}(\boldsymbol{s})$ has a mean, $\boldsymbol{\mu}(\boldsymbol{s})$, and that the variance of $\boldsymbol{Y}(\boldsymbol{s})$ exists everywhere.
+- The process is __strictly stationary__ if: for any $n \geq 1$, any set of $n$ sites $\{\boldsymbol{s}_1, \dots, \boldsymbol{s}_n\}$ and any $\boldsymbol{h} \in \mathcal{R}^r$ (typically r =2), the distribution of $(\boldsymbol{Y}(\boldsymbol{s}_1). \dots, \boldsymbol{Y}(\boldsymbol{s+h}_n))$ is the same as $\boldsymbol{Y}(\boldsymbol{s+h}_1)$
+
+## Strict Stationarity
+Is this strictly stationary?
+```{r}
+# Data
+a <- data.frame( x=rnorm(20000, 0, .5), y=rnorm(20000, 1, .5) )
+b <- data.frame( x=rnorm(20000, 2, 1), y=rnorm(20000, -.5, 1) )
+c <- data.frame( x=rnorm(20000, -.5, 1), y=rnorm(20000, 0, 1) )
+data <- rbind(a,b,c)
+
+ggplot(data, aes(x=x, y=y) ) +
+  stat_density_2d(aes(fill = ..density..), geom = "raster", contour = FALSE) +
+  scale_fill_distiller(palette= "Spectral", direction=1) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(
+    legend.position='none'
+  )
+```
+
+
+## Weak Stationarity
+>- Weak stationarity, or second-order stationarity of a spatial process, requires a constant mean and covariance that is a function of $\boldsymbol{h}$, $Cov(\boldsymbol{Y}(\boldsymbol{s}),\boldsymbol{Y}(\boldsymbol{s +h})) = C(\boldsymbol{h}),$ where $C(\boldsymbol{h})$ is a covariance function that only requires the separation vector $\boldsymbol{h}.$
+- Typically with spatial models, the process is assumed to be mean zero as covariates explain the mean structure. So second-order stationarity is primarily focused on the covariance structure.
+
+
+## Weak Stationarity
+Is this weakly stationary?
+```{r}
+# Data
+dat <- rep(0,100)
+dat[1:100 %%2 == 1] <- sample(x = c(1,-1), size = 50, replace =T)
+dat[1:100 %%2 == 0] <- rnorm(50)
+comb <- data.frame(dat = dat, n = 1:100)
+ggplot(comb, aes(x=n, y=dat) ) +
+  geom_point() + geom_line() + theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+```
+
+## Intrinsic Stationarity
+>- A third kind of stationarity, known as intrinsic stationarity, describes the behavior of differences in the spatial process, rather than the data.
+- Intrinsic stationarity assumes $E[\boldsymbol{Y}(\boldsymbol{s + h}) -\boldsymbol{Y}(\boldsymbol{s}) ] =0$ then define
+$$E[\boldsymbol{Y}(\boldsymbol{s + h}) - \boldsymbol{Y}(\boldsymbol{s})]^2 = Var(\boldsymbol{Y}(\boldsymbol{s + h}) - \boldsymbol{Y}(\boldsymbol{s})) = 2 \gamma(\boldsymbol{h}),$$
+which only works, and satisfies intrinsic stationarity, if the equation only depends on $\boldsymbol{h}$.
+
+## Variograms
+- Intrinsic stationary justifies the use of variograms $2\gamma( \boldsymbol{h})$
+- Variograms are often used to visualize spatial patterns:
+    - If the distance between points is small, the variogram is expected to be small
+    - As the distance between points increases, the variogram increases
+- There is a mathematical link between the covariance function $C(\boldsymbol{h})$ and the variogram $2\gamma(\boldsymbol{h})$.
+
+## Isotropy
+
+- If the variogram $2\gamma(\boldsymbol{h})$ depends only on the length of $\boldsymbol{h}$, $||\boldsymbol{h}||,$ and not the direction, then the variogram is isotropic.
+- If the direction of $\boldsymbol{h}$ impacts the variogram, then the variogram is anisotropic.
+
+# More about Variograms
+
+## Variogram to the Covariance Function
+\begin{eqnarray*}
+2 \gamma (\boldsymbol{h}) &=& Var(\boldsymbol{Y}(\boldsymbol{s+h}) - \boldsymbol{Y}(\boldsymbol{s}))\\
+&=& Var(\boldsymbol{Y}(\boldsymbol{s+h})) + Var(\boldsymbol{Y}(\boldsymbol{s})) - 2 Cov(Var(\boldsymbol{Y}(\boldsymbol{s+h}),\boldsymbol{Y}(\boldsymbol{s})))\\
+&=&C(\boldsymbol{0}) + C(\boldsymbol{0}) - 2C(\boldsymbol{h})\\
+&=& 2 \left[C(\boldsymbol{0}) + C(\boldsymbol{h})\right]
+\end{eqnarray*}
+
+- Given $C()$, the variogram can easily be recovered
+- Going the other way, $2\gamma() \rightarrow C()$, requires additional assumptions
+
+## Linear semivariogram
+<small>$$\gamma(d)=
+\begin{cases}
+\tau^2 + \sigma^2d \; \; \text{if } d > 0\\
+0 \; \; \text{otherwise}
+\end{cases}$$</small>
+
+```{r}
+tau.sq <- 1
+sigma.sq <- 1
+d <- seq(0,3, by =.01)
+lin.gam <- tau.sq + sigma.sq * d
+lin.var <- data.frame(d=d, lin.gam = lin.gam )
+ggplot(data = lin.var, aes(x=d, y=lin.gam)) + geom_line() + ylim(0,4) + ylab('linear variogram')
+```
+
+
+## Nugget, sill, partial-sill, and range
+- Nugget is defined as $\gamma(d): \; d \rightarrow 0_+$
+- Sill is defined as $\gamma(d): \; d \rightarrow \infty$
+- Partial sill is defined as the $\text{sill} - \text{nugget}$
+- Range is defined as the first point where $\gamma(d)$ reaches the sill. Note the Range is often defined as $R =\frac{1}{\phi}$, but confusingly both $R$ and $\phi$ are sometimes referred to as the range. More properly, $\phi$ is called the decay parameter.
+
 
 
 ## Spherical semivariogram: Exercise
@@ -38,6 +142,7 @@ $$\gamma(d)=
 
 - Sketch, or generate in R, a spherical semivariogram
 - On this figure label the nugget, sill, partial sill, and range.
+
 
 ## Spherical semivariogram: Solution
 
@@ -180,4 +285,14 @@ bin.width <- cutoff / 15
 ## Variogram Creation: How - Step 3
 
 Calculate empirical semivariogram
+
+```{r}
+dist.sq <- dist(meuse.small$copper)^2
+
+data.frame(dist = as.numeric(dist.mat), diff = as.numeric(dist.sq)) %>% mutate(bin = floor(dist / bin.width) + 1) %>% filter(bin < 16) %>% group_by(bin) %>% summarize(emp.sv = .5 * mean(diff)) %>% ggplot(aes(x=bin, y= emp.sv)) + geom_point() + xlim(0,15) + ylim(0,800)
+
+## CONTINUE HERE, need to clean up image and verify
+
+```
+
 
