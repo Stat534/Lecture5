@@ -10,6 +10,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(message = FALSE)
 library(knitr)
 library(ggplot2)
 library(dplyr)
@@ -101,7 +102,7 @@ which only works, and satisfies intrinsic stationarity, if the equation only dep
 2 \gamma (\boldsymbol{h}) &=& Var(\boldsymbol{Y}(\boldsymbol{s+h}) - \boldsymbol{Y}(\boldsymbol{s}))\\
 &=& Var(\boldsymbol{Y}(\boldsymbol{s+h})) + Var(\boldsymbol{Y}(\boldsymbol{s})) - 2 Cov(Var(\boldsymbol{Y}(\boldsymbol{s+h}),\boldsymbol{Y}(\boldsymbol{s})))\\
 &=&C(\boldsymbol{0}) + C(\boldsymbol{0}) - 2C(\boldsymbol{h})\\
-&=& 2 \left[C(\boldsymbol{0}) + C(\boldsymbol{h})\right]
+&=& 2 \left[C(\boldsymbol{0}) - C(\boldsymbol{h})\right]
 \end{eqnarray*}
 
 - Given $C()$, the variogram can easily be recovered
@@ -289,10 +290,24 @@ Calculate empirical semivariogram
 ```{r}
 dist.sq <- dist(meuse.small$copper)^2
 
-data.frame(dist = as.numeric(dist.mat), diff = as.numeric(dist.sq)) %>% mutate(bin = floor(dist / bin.width) + 1) %>% filter(bin < 16) %>% group_by(bin) %>% summarize(emp.sv = .5 * mean(diff)) %>% ggplot(aes(x=bin, y= emp.sv)) + geom_point() + xlim(0,15) + ylim(0,800)
+vario.dat <- data.frame(dist = as.numeric(dist.mat), diff = as.numeric(dist.sq)) %>% mutate(bin = floor(dist / bin.width) + 1) %>% filter(bin < 16) %>% group_by(bin) %>% summarize(emp.sv = .5 * mean(diff)) 
+vario.dat
 
-## CONTINUE HERE, need to clean up image and verify
+```
 
+## Variogram Creation: How - Step 4
+
+Plot empirical semivariogram
+```{r}
+vario.dat %>% ggplot(aes(x=bin, y= emp.sv)) + geom_point() + xlim(0,15) + ylim(0,800) + scale_x_continuous(breaks=c(5, 10, 15), labels =c('500','1000','1500')) + ggtitle('Empirical Semivariogram for Copper in Meuse Data Set') + xlab('distance (m)') + ylab('Empirical Semivariogram')
+```
+
+## Variogram Fitting
+
+Now given this empirical semivariogram, how to we choose a semivariogram (and associated covariance structure) and estimate the parameters in that function??
+
+```{r, fig.width= 6, fig.height = 4}
+vario.dat %>% ggplot(aes(x=bin, y= emp.sv)) + geom_point() + xlim(0,15) + ylim(0,800) + scale_x_continuous(breaks=c(5, 10, 15), labels =c('500','1000','1500')) + ggtitle('Empirical Semivariogram for Copper in Meuse Data Set') + xlab('distance (m)') + ylab('Empirical Semivariogram')
 ```
 
 
